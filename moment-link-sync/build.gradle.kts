@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     implementation(project(":moment-link-domain"))
+
     implementation(kotlin("reflect"))
     implementation("org.springframework.boot:spring-boot-starter")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

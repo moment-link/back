@@ -6,7 +6,10 @@ plugins {
 
 dependencies {
     implementation(project(":moment-link-domain"))
+
     implementation(kotlin("reflect"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("tools.jackson.module:jackson-module-kotlin")
 }
