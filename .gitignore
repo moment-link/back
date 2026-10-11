@@ -64,3 +64,14 @@ node_modules/
 
 ### Separate admin frontend project ###
 /moment-link-admin-web/
+
+### Local deployment notes and helper scripts ###
+/infra/deploy/deploy.sh
+/infra/deploy/init-db.sql
+/infra/deploy/README.md
+/infra/deploy/tests/
+/infra/terraform/README.md
+
+# Legacy local application secrets
+/infra/deploy/app.env
+/infra/deploy/app.env.*

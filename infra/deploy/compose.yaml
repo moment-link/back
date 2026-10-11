@@ -1,0 +1,45 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+  api:
+    image: ${APP_IMAGE:?Set an ARM64 image tag or digest}
+    restart: unless-stopped
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx384m"
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: ${DB_URL:?Set DB_URL}
+      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST:?Set REDIS_HOST}
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+      GOOGLE_REDIRECT_URI: https://${APP_DOMAIN:?Set APP_DOMAIN}/api/v1/auth/callback/google
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+    mem_limit: 640m
+    ports:
+      - "127.0.0.1:8080:8080"
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  caddy_data:
+  caddy_config:

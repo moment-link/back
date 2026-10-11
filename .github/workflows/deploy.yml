@@ -1,0 +1,77 @@
+name: Deploy API to EC2
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: moment-link-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test and package API
+        run: bash gradlew :moment-link-api:test :moment-link-api:bootJar --no-daemon
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and push ARM64 image
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/image-context
+          mapfile -t jars < <(find moment-link-api/build/libs -maxdepth 1 -name '*.jar' ! -name '*-plain.jar')
+          test "${#jars[@]}" -eq 1
+          cp "${jars[0]}" /tmp/image-context/app.jar
+          docker build --platform linux/arm64 --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -f infra/deploy/Dockerfile -t "$IMAGE" /tmp/image-context
+          docker push "$IMAGE"
+      - name: Prepare deployment credentials
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          APP_ENV: ${{ secrets.APP_ENV }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS" && test -n "$APP_ENV"
+          mkdir -p ~/.ssh /tmp/deploy-config
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$APP_ENV" > /tmp/deploy-config/.env
+          sed -i '/^APP_IMAGE=/d' /tmp/deploy-config/.env
+          printf '\nAPP_IMAGE=%s\n' "$IMAGE" >> /tmp/deploy-config/.env
+          cp infra/deploy/compose.yaml infra/deploy/Caddyfile /tmp/deploy-config/
+          APP_IMAGE="$IMAGE" docker compose --project-directory /tmp/deploy-config -f /tmp/deploy-config/compose.yaml config --quiet
+      - name: Upload configuration and deploy
+        env:
+          EC2_HOST: ${{ vars.EC2_HOST }}
+        run: |
+          set -euo pipefail
+          [[ "$EC2_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          ssh_opts=(-i ~/.ssh/deploy_key -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15)
+          ssh "${ssh_opts[@]}" "ec2-user@$EC2_HOST" \
+            'sudo -n install -d -m 750 -o ec2-user -g ec2-user /opt/moment-link'
+          scp "${ssh_opts[@]}" /tmp/deploy-config/{compose.yaml,Caddyfile,.env} \
+            "ec2-user@$EC2_HOST:/opt/moment-link/"
+          ssh "${ssh_opts[@]}" "ec2-user@$EC2_HOST" <<'DEPLOY'
+          set -e
+          cd /opt/moment-link
+          chmod 600 .env
+          docker compose -p moment-link pull
+          docker compose -p moment-link up -d --force-recreate --remove-orphans
+          DEPLOY
+      - name: Remove runner secrets
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key /tmp/deploy-config/.env
+          docker logout ghcr.io
