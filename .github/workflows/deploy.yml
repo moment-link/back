@@ -18,8 +18,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            **/*.gradle.kts
+            **/gradle.properties
+            gradle/wrapper/gradle-wrapper.properties
       - name: Test and package API
-        run: bash gradlew :moment-link-api:test :moment-link-api:bootJar --no-daemon
+        run: bash gradlew :moment-link-api:test :moment-link-api:bootJar --no-daemon --build-cache
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_ENV"
       - name: Log in to GHCR

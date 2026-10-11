@@ -10,6 +10,9 @@ spring:
       ssl:
         enabled: true
 
+server:
+  forward-headers-strategy: framework
+
 auth:
   oauth:
     google:
