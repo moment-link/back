@@ -13,7 +13,7 @@ class ApiApplicationTest {
 
     @Test
     fun `application name is configured`() {
-        val applicationYaml = assertNotNull(javaClass.classLoader.getResource("application.yaml")).readText()
+        val applicationYaml = assertNotNull(javaClass.classLoader.getResource("application-local.yaml")).readText()
 
         assertTrue(applicationYaml.contains("name: moment-link-api"))
     }

@@ -12,8 +12,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("tools.jackson.module:jackson-module-kotlin")
     testImplementation(kotlin("test"))
+
+    // mysql
+    runtimeOnly("com.mysql:mysql-connector-j")
 
     // jwt
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")

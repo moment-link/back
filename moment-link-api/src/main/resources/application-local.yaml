@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: moment-link-api
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+auth:
+  oauth:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID}
+      client-secret: ${GOOGLE_CLIENT_SECRET}
+      authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+      token-uri: https://oauth2.googleapis.com/token
+      user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+      redirect-uri: http://localhost:8080/api/v1/auth/callback/google
+
+  jwt:
+    issuer: moment-link
+    secret: ${JWT_SECRET}
+    access-token-expiration: 15m
+    refresh-token-expiration: 14d
+
+  frontend:
+    success-redirect-url: http://localhost:3000/oauth/callback

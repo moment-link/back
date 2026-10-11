@@ -1,3 +1,9 @@
 spring:
-  application:
-    name: moment-link-api
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+# 프론트 기본 주소. 공유 링크는 /event/{shareKey}/join 경로로 생성한다.
+frontend-url: ${FRONTEND_URL:http://localhost:3000}
