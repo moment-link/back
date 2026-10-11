@@ -99,9 +99,9 @@ class Event private constructor(
         }
     }
 
-    fun rotateAccessKey(newAccessKey: String) {
+    fun rotateAccessKey(newAccessKeyHash: String, newAccessKey: String? = null) {
         check(status == EventStatus.OPEN) { "종료된 행사의 공개 키는 교체할 수 없습니다." }
-        this.publicAccess.rotate(newAccessKey)
+        this.publicAccess.rotate(newAccessKeyHash, newAccessKey)
     }
 
     fun isAccessible(now: Instant): Boolean {
@@ -140,9 +140,9 @@ class Event private constructor(
     }
 
     companion object {
-        fun create(userId: Long, name: String, startsAt: Instant, endsAt: Instant, accessKeyHash: String): Event {
+        fun create(userId: Long, name: String, startsAt: Instant, endsAt: Instant, accessKeyHash: String, accessKey: String? = null): Event {
             val event = Event(userId, name, startsAt, endsAt)
-            event.publicAccess = PublicAccess.issue(event, accessKeyHash)
+            event.publicAccess = PublicAccess.issue(event, accessKeyHash, accessKey)
             return event
         }
     }

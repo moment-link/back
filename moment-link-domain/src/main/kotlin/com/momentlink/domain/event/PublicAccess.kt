@@ -18,6 +18,7 @@ import java.time.Instant
 class PublicAccess private constructor(
     event: Event,
     accessKeyHash: String,
+    accessKey: String? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,6 +32,11 @@ class PublicAccess private constructor(
 
     @Column(name = "access_key_hash", nullable = false, unique = true)
     var accessKeyHash: String = accessKeyHash
+        protected set
+
+    // 호스트의 공유 링크 재조회용. 이전 해시 전용 데이터는 재발급 전까지 null이다.
+    @Column(name = "access_key", length = 43)
+    var accessKey: String? = accessKey
         protected set
 
     @Enumerated(EnumType.STRING)
@@ -60,15 +66,16 @@ class PublicAccess private constructor(
         this.disabledAt = disabledAt
     }
 
-    fun rotate(newAccessKeyHash: String) {
+    fun rotate(newAccessKeyHash: String, newAccessKey: String? = null) {
         require(newAccessKeyHash.isNotBlank()) { "공개 접근 키 해시는 비어 있을 수 없습니다." }
         this.accessKeyHash = newAccessKeyHash
+        this.accessKey = newAccessKey
     }
 
     companion object {
-        fun issue(event: Event, accessKeyHash: String): PublicAccess {
+        fun issue(event: Event, accessKeyHash: String, accessKey: String? = null): PublicAccess {
             require(accessKeyHash.isNotBlank()) { "공개 접근 키는 비어있을 수 없습니다" }
-            return PublicAccess(event, accessKeyHash)
+            return PublicAccess(event, accessKeyHash, accessKey)
         }
     }
 }
