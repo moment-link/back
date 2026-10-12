@@ -20,7 +20,7 @@ class TokenCookieProvider {
         ResponseCookie.from(type.cookieName, token)
             .httpOnly(true)
             .secure(true)
-            .sameSite("Lax")
+            .sameSite(if (type == TokenCookie.REFRESH_TOKEN) "None" else "Lax")
             .path(type.path(eventId))
             .maxAge(maxAge)
             .build()

@@ -30,4 +30,4 @@ auth:
     refresh-token-expiration: 14d
 
   frontend:
-    success-redirect-url: http://localhost:3000/oauth/callback
+    success-redirect-url: ${FRONTEND_REDIRECT_URL}
