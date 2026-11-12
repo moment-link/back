@@ -35,15 +35,3 @@ resource "aws_vpc_security_group_ingress_rule" "db" {
   from_port                    = 3306
   to_port                      = 3306
 }
-resource "aws_security_group" "cache" {
-  name        = "${var.name}-cache"
-  vpc_id      = aws_vpc.main.id
-  description = "Valkey TLS from application only"
-}
-resource "aws_vpc_security_group_ingress_rule" "cache" {
-  security_group_id            = aws_security_group.cache.id
-  referenced_security_group_id = aws_security_group.app.id
-  ip_protocol                  = "tcp"
-  from_port                    = 6379
-  to_port                      = 6379
-}

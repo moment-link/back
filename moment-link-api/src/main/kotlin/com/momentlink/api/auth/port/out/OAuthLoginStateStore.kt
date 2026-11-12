@@ -10,8 +10,8 @@ interface OAuthLoginStateStore {
     fun issue(provider: LoginProvider): String
 
     /**
-     * 저장된 provider를 반환하며 state를 원자적으로 삭제.
-     * 존재하지 않거나 소비된 state는 null을 반환
+     * state를 한 번만 소비하고 provider와 만료 시간을 검증한다.
+     * 유효하지 않은 state는 INVALID_OAUTH_STATE 예외를 발생시킨다.
      */
     fun validateAndConsume(provider: String, state: String?, cookieState: String?)
 }

@@ -5,10 +5,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-  data:
-    redis:
-      ssl:
-        enabled: true
 
 server:
   forward-headers-strategy: framework

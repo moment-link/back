@@ -46,20 +46,7 @@ variable "db_password_version" {
   default     = 1
   description = "Increment when changing the write-only DB password."
 }
-variable "valkey_auth_token" {
-  type        = string
-  sensitive   = true
-  description = "16-128 characters; stored in protected Terraform state."
-  validation {
-    condition     = can(regex("^[A-Za-z0-9!&#$^<>-]{16,128}$", var.valkey_auth_token))
-    error_message = "Use 16-128 letters, digits or ! & # $ ^ < > - characters."
-  }
-}
 variable "mysql_engine_version" {
   type    = string
   default = "8.4"
-}
-variable "valkey_engine_version" {
-  type    = string
-  default = "7.2"
 }
