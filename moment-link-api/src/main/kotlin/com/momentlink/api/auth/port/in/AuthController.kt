@@ -16,6 +16,7 @@ import com.momentlink.api.common.web.TokenCookie
 import com.momentlink.api.common.web.TokenCookieProvider
 import io.swagger.v3.oas.annotations.Parameter
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseCookie
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 import java.time.Duration
 
@@ -38,6 +40,7 @@ class AuthController(
     private val cookieProvider: TokenCookieProvider,
     private val properties: AuthProperties,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /**
      * 유저 로그인용 OAuth URL 발급
@@ -95,6 +98,29 @@ class AuthController(
             stateCookie("oauth_login_state", Duration.ZERO).toString()
         )
 
+        // 브라우저가 직접 여는 경로라 실패해도 JSON 대신 프론트 콜백 화면으로 돌려보낸다.
+        val loginCookie = try {
+            loginByCallback(provider, code, state, error, cookieState)
+        } catch (ex: BusinessException) {
+            log.warn("[{}] OAuth 콜백 실패 - {}", ex.errorCode.code, ex.reason ?: ex.errorCode.message)
+            return ResponseEntity.status(HttpStatus.FOUND)
+                .location(failureRedirectUri(ex.errorCode))
+                .build()
+        }
+
+        return ResponseEntity.status(HttpStatus.FOUND)
+            .header(HttpHeaders.SET_COOKIE, loginCookie.toString())
+            .location(URI.create(properties.successRedirectUrl))
+            .build()
+    }
+
+    private fun loginByCallback(
+        provider: String,
+        code: String?,
+        state: String?,
+        error: String?,
+        cookieState: String?,
+    ): ResponseCookie {
         stateStore.validateAndConsume(provider.uppercase(), state, cookieState)
 
         if(error != null) {
@@ -104,20 +130,23 @@ class AuthController(
             )
         }
 
-        require(!code.isNullOrBlank()) { "Google 인증 코드가 없습니다." }
+        if (code.isNullOrBlank()) {
+            throw BusinessException(ErrorCode.OAUTH_LOGIN_FAILED, reason = "인증 코드 없음")
+        }
 
         val loginResResult = authService.getUserAndLogin(LoginProvider.valueOf(provider.uppercase()), code)
-        val loginCookie = cookieProvider.create(
+        return cookieProvider.create(
             TokenCookie.REFRESH_TOKEN,
             loginResResult.refreshToken,
             loginResResult.refreshTokenExpiresIn,
         )
-
-        return ResponseEntity.status(HttpStatus.FOUND)
-            .header(HttpHeaders.SET_COOKIE, loginCookie.toString())
-            .location(URI.create(properties.successRedirectUrl))
-            .build()
     }
+
+    private fun failureRedirectUri(errorCode: ErrorCode): URI =
+        UriComponentsBuilder.fromUriString(properties.successRedirectUrl)
+            .queryParam("error", errorCode.code)
+            .build()
+            .toUri()
 
 
     /**
@@ -130,8 +159,11 @@ class AuthController(
     @PostMapping("/token/refresh")
     fun refreshToken(
         @Parameter(hidden = true)
-        @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME) refreshToken: String
+        @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME, required = false) refreshToken: String?
     ): ResponseEntity<CommonResponse<RefreshResDto>> {
+        if (refreshToken.isNullOrBlank()) {
+            throw BusinessException(ErrorCode.AUTHENTICATION_REQUIRED, reason = "refresh_token 쿠키 없음")
+        }
         val refreshResResult = authService.refresh(refreshToken)
         val refreshCookie = cookieProvider.create(
             TokenCookie.REFRESH_TOKEN,

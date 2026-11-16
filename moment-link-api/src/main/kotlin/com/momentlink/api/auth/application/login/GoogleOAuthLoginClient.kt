@@ -10,6 +10,7 @@ import com.momentlink.domain.user.LoginProvider
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
 import org.springframework.web.util.UriComponentsBuilder
 
@@ -37,15 +38,16 @@ class GoogleOAuthLoginClient(
     override fun getUserProfile(code: String): OAuthUserProfile {
         val accessToken = exchangeCode(code)
 
-        val googleUser = restClient.get()
-            .uri(properties.userInfoUri)
-            .headers { it.setBearerAuth(accessToken) }
-            .retrieve()
-            .body(GoogleUserRes::class.java)
-            ?: throw BusinessException(ErrorCode.GOOGLE_USER_INFO_RESPONSE_INVALID)
+        val googleUser = rejectedByGoogle("userinfo") {
+            restClient.get()
+                .uri(properties.userInfoUri)
+                .headers { it.setBearerAuth(accessToken) }
+                .retrieve()
+                .body(GoogleUserRes::class.java)
+        } ?: throw BusinessException(ErrorCode.GOOGLE_USER_INFO_RESPONSE_INVALID)
 
-        check(googleUser.emailVerified) {
-            "인증되지 않은 이메일입니다."
+        if (!googleUser.emailVerified) {
+            throw BusinessException(ErrorCode.OAUTH_LOGIN_FAILED, reason = "인증되지 않은 이메일")
         }
         return OAuthUserProfile(
             provider = provider,
@@ -63,13 +65,25 @@ class GoogleOAuthLoginClient(
             add("code", code)
         }
 
-        return restClient.post()
-            .uri(properties.tokenUri)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .body(GoogleTokenRes::class.java)
-            ?.accessToken
+        return rejectedByGoogle("token") {
+            restClient.post()
+                .uri(properties.tokenUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(form)
+                .retrieve()
+                .body(GoogleTokenRes::class.java)
+        }?.accessToken
             ?: throw BusinessException(ErrorCode.GOOGLE_TOKEN_RESPONSE_INVALID)
     }
+
+    // 만료·재사용된 code처럼 Google이 4xx로 거절한 요청은 서버 오류가 아니라 로그인 실패로 본다.
+    private fun <T> rejectedByGoogle(endpoint: String, call: () -> T): T =
+        try {
+            call()
+        } catch (ex: HttpClientErrorException) {
+            throw BusinessException(
+                ErrorCode.OAUTH_LOGIN_FAILED,
+                reason = "Google $endpoint ${ex.statusCode.value()}",
+            )
+        }
 }
