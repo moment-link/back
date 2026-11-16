@@ -3,10 +3,12 @@ package com.momentlink.api.participant.security
 import com.momentlink.api.auth.common.BusinessException
 import com.momentlink.api.common.web.PARTICIPANT_TOKEN_COOKIE_NAME
 import com.momentlink.api.common.web.ErrorCode
+import com.momentlink.api.common.web.ErrorResponseWriter
 import com.momentlink.api.participant.application.ParticipantSessionAuthService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
@@ -15,8 +17,10 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class ParticipantSessionAuthFilter(
-    private val participantSessionAuthService: ParticipantSessionAuthService
+    private val participantSessionAuthService: ParticipantSessionAuthService,
+    private val errorResponseWriter: ErrorResponseWriter,
 ): OncePerRequestFilter() {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.servletPath
@@ -50,8 +54,10 @@ class ParticipantSessionAuthFilter(
                 context.authentication = authentication
                 SecurityContextHolder.setContext(context)
             } catch (ex: BusinessException) {
+                // 필터 단계 예외는 GlobalExceptionHandler에 닿지 않으므로 같은 형식으로 직접 남기고 응답한다.
+                log.warn("[{}] {} {} - {}", ex.errorCode.code, request.method, request.requestURI, ex.reason ?: ex.errorCode.message)
                 SecurityContextHolder.clearContext()
-                response.sendError(ex.errorCode.httpStatus.value(), ex.errorCode.message)
+                errorResponseWriter.write(response, ex.errorCode)
                 return
             }
         }

@@ -10,6 +10,7 @@ import com.momentlink.api.participant.dto.SessionResult
 import com.momentlink.api.participant.port.out.ParticipantSessionRepository
 import com.momentlink.api.participant.security.AuthenticatedParticipant
 import com.momentlink.domain.participant.ParticipantSession
+import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -25,6 +26,8 @@ class ParticipantSessionAuthService(
     private val keyHasher: KeyHasher,
     private val eventRepository: EventRepository,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @Transactional(readOnly = true)
     fun authenticate(token: String, eventId: Long): AuthenticatedParticipant {
         val now = Instant.now()
@@ -121,6 +124,7 @@ class ParticipantSessionAuthService(
             )
         )
 
+        log.info("참가자 세션 발급: eventId={}, sessionId={}", eventId, session.requireId())
         return SessionResult(
             sessionId = session.requireId(),
             eventId = eventId,

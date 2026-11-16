@@ -64,19 +64,15 @@ class ParticipantSessionAuthServiceTest {
                 else -> null
             }
         }
-        var status: Int? = null
-        val response = Proxy.newProxyInstance(
-            jakarta.servlet.http.HttpServletResponse::class.java.classLoader,
-            arrayOf(jakarta.servlet.http.HttpServletResponse::class.java),
-        ) { _, method, args ->
-            if (method.name == "sendError") status = args[0] as Int
-            null
-        } as jakarta.servlet.http.HttpServletResponse
+        val response = org.springframework.mock.web.MockHttpServletResponse()
         var proceeded = false
         try {
-            com.momentlink.api.participant.security.ParticipantSessionAuthFilter(service())
+            com.momentlink.api.participant.security.ParticipantSessionAuthFilter(
+                service(),
+                com.momentlink.api.common.web.ErrorResponseWriter(tools.jackson.databind.json.JsonMapper.builder().build()),
+            )
                 .doFilter(request, response, jakarta.servlet.FilterChain { _, _ -> proceeded = true })
-            assertEquals(403, status)
+            assertEquals(403, response.status)
             assertFalse(proceeded)
             assertNull(org.springframework.security.core.context.SecurityContextHolder.getContext().authentication)
         } finally {

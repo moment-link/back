@@ -24,3 +24,7 @@ auth:
 
   frontend:
     success-redirect-url: http://localhost:3000/oauth/callback
+
+logging:
+  level:
+    com.momentlink: DEBUG

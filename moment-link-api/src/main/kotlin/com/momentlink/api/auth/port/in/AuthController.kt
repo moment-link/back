@@ -2,12 +2,15 @@ package com.momentlink.api.auth.port.`in`
 
 import io.swagger.v3.oas.annotations.Operation
 import com.momentlink.api.auth.application.AuthService
+import com.momentlink.api.auth.common.BusinessException
 import com.momentlink.api.auth.common.web.AuthProperties
 import com.momentlink.domain.user.LoginProvider
 import com.momentlink.api.auth.dto.RefreshResDto
 import com.momentlink.api.auth.port.out.OAuthLoginStateStore
+import com.momentlink.api.common.LogSanitizer
 import com.momentlink.api.common.web.CommonResponse
 import com.momentlink.api.common.web.CommonResponse.Companion.success
+import com.momentlink.api.common.web.ErrorCode
 import com.momentlink.api.common.web.REFRESH_TOKEN_COOKIE_NAME
 import com.momentlink.api.common.web.TokenCookie
 import com.momentlink.api.common.web.TokenCookieProvider
@@ -95,7 +98,10 @@ class AuthController(
         stateStore.validateAndConsume(provider.uppercase(), state, cookieState)
 
         if(error != null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+            throw BusinessException(
+                ErrorCode.OAUTH_LOGIN_FAILED,
+                reason = "provider=${LogSanitizer.sanitize(provider)}, error=${LogSanitizer.sanitize(error)}",
+            )
         }
 
         require(!code.isNullOrBlank()) { "Google 인증 코드가 없습니다." }

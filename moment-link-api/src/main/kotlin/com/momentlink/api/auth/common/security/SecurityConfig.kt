@@ -1,7 +1,9 @@
 package com.momentlink.api.auth.common.security
 
+import com.momentlink.api.common.web.ErrorCode
+import com.momentlink.api.common.web.ErrorResponseWriter
 import com.momentlink.api.participant.security.ParticipantSessionAuthFilter
-import jakarta.servlet.http.HttpServletResponse
+import org.slf4j.LoggerFactory
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,7 +20,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter,
     private val participantSessionAuthFilter: ParticipantSessionAuthFilter,
+    private val errorResponseWriter: ErrorResponseWriter,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     private val WHITELIST = arrayOf(
         // swagger
         "/swagger-ui.html",
@@ -63,17 +68,13 @@ class SecurityConfig(
 
             .exceptionHandling { exception ->
                 exception
+                    // 시큐리티 단계 오류는 GlobalExceptionHandler에 닿지 않으므로 같은 형식으로 직접 응답한다.
                     .authenticationEntryPoint { _, response, _ ->
-                        response.sendError(
-                            HttpServletResponse.SC_UNAUTHORIZED,
-                            "인증이 필요합니다.",
-                        )
+                        errorResponseWriter.write(response, ErrorCode.AUTHENTICATION_REQUIRED)
                     }
-                    .accessDeniedHandler { _, response, _ ->
-                        response.sendError(
-                            HttpServletResponse.SC_FORBIDDEN,
-                            "접근 권한이 없습니다.",
-                        )
+                    .accessDeniedHandler { request, response, _ ->
+                        log.warn("[{}] {} {}", ErrorCode.ACCESS_DENIED.code, request.method, request.requestURI)
+                        errorResponseWriter.write(response, ErrorCode.ACCESS_DENIED)
                     }
             }
 

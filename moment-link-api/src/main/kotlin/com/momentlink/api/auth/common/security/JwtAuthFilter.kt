@@ -3,6 +3,7 @@ package com.momentlink.api.auth.common.security
 import com.momentlink.api.auth.application.JwtProvider
 import com.momentlink.api.user.port.out.UserRepository
 import com.momentlink.domain.user.UserStatus
+import org.slf4j.LoggerFactory
 import org.springframework.data.repository.findByIdOrNull
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -20,6 +21,7 @@ class JwtAuthFilter(
     private val jwtProvider: JwtProvider,
     private val userRepository: UserRepository,
 ): OncePerRequestFilter() {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         request.servletPath.startsWith("/api/v1/upload")
@@ -43,6 +45,7 @@ class JwtAuthFilter(
             val userId = jwtProvider.extractUserId(token, JwtTokenType.ACCESS)
             val user = userRepository.findByIdOrNull(userId)
             if (user == null || user.status != UserStatus.ACTIVE) {
+                log.warn("사용할 수 없는 사용자의 access token: userId={}, status={}", userId, user?.status)
                 SecurityContextHolder.clearContext()
                 return
             }
@@ -56,7 +59,9 @@ class JwtAuthFilter(
             val context = SecurityContextHolder.createEmptyContext()
             context.authentication = authentication
             SecurityContextHolder.setContext(context)
-        } catch (_: InvalidJwtTokenException) {
+        } catch (ex: InvalidJwtTokenException) {
+            // 만료는 정상 흐름(갱신 후 재시도)이라 DEBUG로만 남긴다.
+            log.debug("Access token 거부: {} {} - {} ({})", request.method, request.requestURI, ex.message, ex.cause?.javaClass?.simpleName)
             SecurityContextHolder.clearContext()
         }
     }

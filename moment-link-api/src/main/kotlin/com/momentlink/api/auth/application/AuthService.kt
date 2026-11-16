@@ -13,6 +13,8 @@ import com.momentlink.api.auth.port.out.RefreshTokenRepository
 import com.momentlink.api.common.security.UserProvider
 import com.momentlink.api.user.port.out.UserRepository
 import com.momentlink.domain.user.UserStatus
+import org.slf4j.LoggerFactory
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -25,6 +27,8 @@ class AuthService(
     private val userRepository: UserRepository,
     private val userProvider: UserProvider,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     // 각각의 로그인 provider 구현체를 spring bean으로 등록
     private val clients: Map<LoginProvider, OAuthLoginClient> =
         clients.associateBy { it.provider }
@@ -44,22 +48,22 @@ class AuthService(
     fun refresh(token: String): RefreshResResult {
         val userId = try {
             jwtProvider.extractUserId(token, JwtTokenType.REFRESH)
-        } catch (_: InvalidJwtTokenException) {
-            throw RuntimeException("유효하지 않은 refresh token입니다.")
+        } catch (ex: InvalidJwtTokenException) {
+            throw BusinessException(ErrorCode.INVALID_REFRESH_TOKEN, reason = "JWT 검증 실패: ${ex.message} (${ex.cause?.javaClass?.simpleName})")
         }
 
         val storedToken = refreshTokenRepository.findByTokenForUpdate(token)
-            ?: throw BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND)
+            ?: throw BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND, reason = "저장소에 없는 토큰 (이미 교체됐거나 로그아웃됨), userId=$userId")
 
         if(storedToken.userId != userId) {
-            throw RuntimeException("사용자 정보가 일치하지 않습니다.")
+            throw BusinessException(ErrorCode.INVALID_REFRESH_TOKEN, reason = "토큰 사용자 불일치, userId=$userId, storedUserId=${storedToken.userId}")
         }
 
-        val user = userRepository.findById(userId)
-            .orElseThrow { RuntimeException("존재하지 않는 사용자입니다.") }
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw BusinessException(ErrorCode.INVALID_REFRESH_TOKEN, reason = "존재하지 않는 사용자, userId=$userId")
 
         if(user.status != UserStatus.ACTIVE) {
-            throw RuntimeException("토큰을 재발급할 수 없습니다.")
+            throw BusinessException(ErrorCode.INACTIVE_USER, reason = "비활성 사용자, userId=$userId, status=${user.status}")
         }
 
         refreshTokenRepository.delete(storedToken)
@@ -81,6 +85,7 @@ class AuthService(
     fun logout() {
         val userId = userProvider.getUserId()
         refreshTokenRepository.deleteByUserId(userId)
+        log.info("로그아웃: userId={}", userId)
     }
 
     // provider 구현체 resolver

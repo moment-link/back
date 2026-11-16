@@ -36,16 +36,28 @@ class JpaOAuthLoginStateStore(
     // provider가 틀리거나 만료된 state도 읽은 즉시 소비한다.
     @Transactional(noRollbackFor = [BusinessException::class])
     override fun validateAndConsume(provider: String, state: String?, cookieState: String?) {
-        if (state.isNullOrBlank() || cookieState.isNullOrBlank() || state != cookieState) {
-            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE)
+        if (state.isNullOrBlank()) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "state 파라미터 없음")
+        }
+        if (cookieState.isNullOrBlank()) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "state 쿠키 없음")
+        }
+        if (state != cookieState) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "state 파라미터와 쿠키 불일치")
         }
 
         val stored = repository.findByStateForUpdate(state)
-            ?: throw BusinessException(ErrorCode.INVALID_OAUTH_STATE)
+            ?: throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "저장된 state 없음 (이미 사용됐거나 만료돼 정리됨)")
         repository.delete(stored)
 
-        if (stored.state != state || stored.provider.name != provider || !stored.expiresAt.isAfter(Instant.now())) {
-            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE)
+        if (stored.state != state) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "저장된 state와 불일치")
+        }
+        if (stored.provider.name != provider) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "provider 불일치")
+        }
+        if (!stored.expiresAt.isAfter(Instant.now())) {
+            throw BusinessException(ErrorCode.INVALID_OAUTH_STATE, reason = "만료된 state")
         }
     }
 }

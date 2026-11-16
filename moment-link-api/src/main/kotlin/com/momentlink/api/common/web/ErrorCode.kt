@@ -8,6 +8,7 @@ enum class ErrorCode(
     val message: String,
 ) {
     INVALID_PAGINATION(HttpStatus.BAD_REQUEST, "COMMON_001", "페이지와 조회 개수를 확인해주세요."),
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_002", "서버 오류가 발생했습니다."),
     EVENT_CLOSED(HttpStatus.CONFLICT, "EVENT_005", "종료된 행사입니다."),
     EVENT_ACCESS_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "EVENT_006", "기존 공유 키를 조회할 수 없습니다. 공유 키를 재발급해주세요."),
     INVALID_PARTICIPANT_SESSION(HttpStatus.UNAUTHORIZED, "PARTICIPANT_001", "유효하지 않은 참가자 세션입니다."),
@@ -18,6 +19,7 @@ enum class ErrorCode(
     EVENT_ACCESS_DISABLED(HttpStatus.FORBIDDEN, "EVENT_004", "공개 접근이 비활성화된 행사입니다."),
     GOOGLE_USER_INFO_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "OAUTH_001", "Google 사용자 정보 응답이 올바르지 않습니다."),
     GOOGLE_TOKEN_RESPONSE_INVALID(HttpStatus.BAD_GATEWAY, "OAUTH_002", "Google 토큰 응답이 올바르지 않습니다."),
+    OAUTH_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "OAUTH_003", "소셜 로그인이 취소되었거나 실패했습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "유효하지 않은 Refresh Token입니다."),
 
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH_002", "존재하지 않는 Refresh Token입니다."),
@@ -27,6 +29,8 @@ enum class ErrorCode(
     INACTIVE_USER(HttpStatus.FORBIDDEN,"AUTH_003","토큰을 재발급할 수 없는 사용자입니다."),
     INVALID_OAUTH_STATE(HttpStatus.BAD_REQUEST, "AUTH_004", "유효하지 않은 로그인 요청입니다."),
     INACTIVE_ACCOUNT(HttpStatus.FORBIDDEN, "AUTH_005", "이용할 수 없는 계정입니다."),
+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_006", "인증이 필요합니다."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_007", "접근 권한이 없습니다."),
     NOT_FOUND_USER(HttpStatus.BAD_REQUEST, "USER_002", "사용자를 찾을 수 없습니다."),
 
 

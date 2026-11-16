@@ -27,7 +27,7 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
 
     // Swagger
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0",)
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1",)
 }
 repositories {
     mavenCentral()

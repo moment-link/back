@@ -9,6 +9,7 @@ import com.momentlink.api.auth.port.out.RefreshTokenRepository
 import com.momentlink.api.user.port.out.UserRepository
 import com.momentlink.domain.user.LoginProvider
 import com.momentlink.domain.user.User
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -18,19 +19,21 @@ class AuthLoginService(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtProvider: JwtProvider
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     fun login(email: String, provider: LoginProvider): LoginResResult {
-        val user = findOrCreateUser(email, provider)
+        // email에 대해 유저가 있으면 사용, 없으면 생성
+        val existingUser = userRepository.findByEmail(email)
+        val user = existingUser ?: userRepository.save(User.create(email, provider))
         if (user.status != UserStatus.ACTIVE) {
-            throw BusinessException(ErrorCode.INACTIVE_ACCOUNT)
+            throw BusinessException(ErrorCode.INACTIVE_ACCOUNT, reason = "userId=${user.id}, status=${user.status}")
         }
-        return createAuthLoginRes(user)
-    }
 
-    // email에 대해 유저가 있으면 return, 없으면 생성해서 return
-    private fun findOrCreateUser(email: String, provider: LoginProvider): User =
-        userRepository.findByEmail(email) ?: userRepository.save(User.create(email, provider))
+        val result = createAuthLoginRes(user)
+        log.info("로그인 성공: userId={}, provider={}, newUser={}", user.id, provider, existingUser == null)
+        return result
+    }
 
     // user정보로 access, refresh 토큰 생성 및 refresh token 저장
     private fun createAuthLoginRes(user: User): LoginResResult {

@@ -7,3 +7,8 @@ spring:
 
 # 프론트 기본 주소. 공유 링크는 /event/{shareKey}/join 경로로 생성한다.
 frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
+logging:
+  level:
+    # 허용되지 않은 Origin을 거부할 때 사유를 남긴다.
+    org.springframework.web.cors.DefaultCorsProcessor: DEBUG
