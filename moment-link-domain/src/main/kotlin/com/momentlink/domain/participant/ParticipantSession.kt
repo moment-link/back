@@ -43,7 +43,8 @@ class ParticipantSession private constructor(
     var expiresAt: Instant = expiresAt
         protected set
 
-    @Column(name = "display_name", unique = true, nullable = false, updatable = true)
+    // 행사 단위 유일성은 uk_participant_event_display_name이 맡는다.
+    @Column(name = "display_name", nullable = false)
     var displayName: String = displayName
         protected set
 
@@ -56,6 +57,11 @@ class ParticipantSession private constructor(
 
     fun isExpired(now: Instant): Boolean
         = !now.isBefore(expiresAt)
+
+    fun rename(displayName: String) {
+        require(displayName.isNotBlank()) { "닉네임은 비어 있을 수 없습니다." }
+        this.displayName = displayName
+    }
 
     fun promoteToCoHost() {
         role = ParticipantRole.CO_HOST

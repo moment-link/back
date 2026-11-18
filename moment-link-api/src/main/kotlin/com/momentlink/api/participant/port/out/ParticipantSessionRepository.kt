@@ -12,6 +12,8 @@ interface ParticipantSessionRepository: JpaRepository<ParticipantSession, Long> 
 
     fun findBySessionTokenHash(sessionTokenHash: String): ParticipantSession?
 
+    fun existsByEventIdAndDisplayNameAndIdNot(eventId: Long, displayName: String, id: Long): Boolean
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
         """
