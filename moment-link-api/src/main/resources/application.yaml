@@ -4,6 +4,10 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+  task:
+    scheduling:
+      pool:
+        size: 2   # 전송이 길어져도 정리 Job이 밀리지 않게
 
 # 프론트 기본 주소. 공유 링크는 /event/{shareKey}/join 경로로 생성한다.
 frontend-url: ${FRONTEND_URL:http://localhost:5173}
@@ -42,3 +46,12 @@ storage:
     user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
     redirect-uri: ${GOOGLE_DRIVE_REDIRECT_URI}
     folder-prefix: Moment Link
+
+transfer:
+  worker:
+    enabled: ${TRANSFER_WORKER_ENABLED:true}
+    poll-interval-ms: 30000
+    batch-size: 5
+    max-attempts: 5
+    # 이 시간 넘게 IN_PROGRESS면 서버가 전송 중 재시작된 것으로 보고 재시도한다.
+    stale-after: 30m

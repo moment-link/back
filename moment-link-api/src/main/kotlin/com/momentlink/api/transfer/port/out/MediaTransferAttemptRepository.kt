@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository
 interface MediaTransferAttemptRepository : JpaRepository<MediaTransferAttempt, Long> {
 
     fun findAllByMediaTransferIdOrderByAttemptNumberDesc(mediaTransferId: Long): List<MediaTransferAttempt>
+
+    fun findByMediaTransferIdAndAttemptNumber(mediaTransferId: Long, attemptNumber: Int): MediaTransferAttempt?
 }
