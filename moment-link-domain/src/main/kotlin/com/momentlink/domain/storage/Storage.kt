@@ -57,6 +57,11 @@ class Storage private constructor(
     var status: StorageStatus = StorageStatus.CONNECTED
         protected set
 
+    // 행사 전용 폴더. 첫 전송 때 워커가 만든다.
+    @Column(name = "destination_folder_id")
+    var destinationFolderId: String? = null
+        protected set
+
     fun isConnected(): Boolean
         = status == StorageStatus.CONNECTED
 
@@ -80,10 +85,24 @@ class Storage private constructor(
         accountEmail: String,
         encryptedRefreshToken: String
     ) {
+        // 다른 계정으로 바꾸면 이전 계정의 폴더를 쓰지 않는다.
+        if (this.externalAccountId != externalAccountId) {
+            destinationFolderId = null
+        }
         this.provider = provider
         this.externalAccountId = externalAccountId
         this.accountEmail = accountEmail
         this.encryptedRefreshToken = encryptedRefreshToken
+        this.status = StorageStatus.CONNECTED
+    }
+
+    fun assignDestinationFolder(folderId: String) {
+        require(folderId.isNotBlank()) { "폴더 ID는 비어 있을 수 없습니다." }
+        destinationFolderId = folderId
+    }
+
+    fun clearDestinationFolder() {
+        destinationFolderId = null
     }
 
     companion object {

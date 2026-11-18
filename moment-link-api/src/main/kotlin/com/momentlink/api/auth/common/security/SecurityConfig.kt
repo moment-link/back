@@ -35,6 +35,7 @@ class SecurityConfig(
         "/api/v1/auth/login",
         "/api/v1/auth/callback/**",
         "/api/v1/auth/token/refresh",
+        "/api/v1/storage/callback/**",
         "/error",
 
 

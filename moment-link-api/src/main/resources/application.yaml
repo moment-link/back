@@ -27,3 +27,18 @@ logging:
   level:
     # 허용되지 않은 Origin을 거부할 때 사유를 남긴다.
     org.springframework.web.cors.DefaultCorsProcessor: DEBUG
+
+storage:
+  # 저장소 연결 콜백 후 이동할 프론트 화면. eventId·result·error 쿼리를 붙여 보낸다.
+  frontend-redirect-url: ${FRONTEND_STORAGE_REDIRECT_URL}
+  # refresh token 암호화 키. openssl rand -base64 32
+  token-encryption-key: ${STORAGE_TOKEN_ENCRYPTION_KEY}
+  google-drive:
+    # 로그인과 같은 OAuth 클라이언트를 쓴다.
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+    token-uri: https://oauth2.googleapis.com/token
+    user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+    redirect-uri: ${GOOGLE_DRIVE_REDIRECT_URI}
+    folder-prefix: Moment Link
