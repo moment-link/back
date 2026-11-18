@@ -17,6 +17,7 @@ import com.momentlink.api.event.dto.EventAccessResDto
 import com.momentlink.api.event.dto.EventUpdateReqDto
 import com.momentlink.api.event.dto.EventUpdateResDto
 import com.momentlink.api.event.port.out.EventRepository
+import com.momentlink.api.moment.port.out.MomentRepository
 import com.momentlink.domain.event.Event
 import com.momentlink.domain.event.EventStatus
 import org.springframework.data.domain.PageRequest
@@ -29,6 +30,7 @@ class EventService(
     private val eventRepository: EventRepository,
     private val userProvider: UserProvider,
     private val keyGenerator: KeyGenerator,
+    private val momentRepository: MomentRepository,
 ) {
 
     @Transactional
@@ -97,7 +99,12 @@ class EventService(
 
         req.name?.let(event::rename)
         if (req.startsAt != null || req.endsAt != null) {
-            event.reschedule(req.startsAt ?: event.startsAt, req.endsAt ?: event.endsAt)
+            val startsAt = req.startsAt ?: event.startsAt
+            val endsAt = req.endsAt ?: event.endsAt
+            if (momentRepository.existsOutside(eventId, startsAt, endsAt)) {
+                throw BusinessException(ErrorCode.EVENT_PERIOD_CONFLICTS_MOMENT)
+            }
+            event.reschedule(startsAt, endsAt)
         }
 
         return EventUpdateResDto.from(event)
