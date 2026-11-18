@@ -36,6 +36,7 @@ class MediaAsset private constructor(
     sizeBytes: Long,
     checkSum: String,
     capturedAt: Instant?,
+    uploadExpiresAt: Instant,
 ): BaseEntity() {
 
     @Id
@@ -117,6 +118,20 @@ class MediaAsset private constructor(
     var deletedAt: Instant? = null
         protected set
 
+    // 준비 시 정한 업로드 기한. 재요청해도 늘리지 않는다. 업로드 API 이전 행은 null.
+    @Column(name = "upload_expires_at")
+    var uploadExpiresAt: Instant? = uploadExpiresAt
+        protected set
+
+    @Column(name = "like_count", nullable = false)
+    var likeCount: Int = 0
+        protected set
+
+    // S3 원본·썸네일을 지운 시각. 정리 Job이 조건부 UPDATE로 기록한다.
+    @Column(name = "purged_at")
+    var purgedAt: Instant? = null
+        protected set
+
     init {
         require(fileName.isNotBlank())
         require(sizeBytes > 0)
@@ -132,6 +147,24 @@ class MediaAsset private constructor(
     }
 
     fun isDeleted(): Boolean = deletedAt != null
+
+    fun isUploadExpired(now: Instant): Boolean =
+        uploadExpiresAt?.let { !now.isBefore(it) } ?: true
+
+    fun matchesPrepareRequest(
+        fileName: String,
+        mediaType: MediaType,
+        mimeType: String,
+        sizeBytes: Long,
+        checkSum: String,
+        capturedAt: Instant?,
+    ): Boolean =
+        this.fileName == fileName &&
+            this.mediaType == mediaType &&
+            this.mimeType == mimeType &&
+            this.sizeBytes == sizeBytes &&
+            this.checkSum == checkSum &&
+            this.capturedAt == capturedAt
 
 
     fun requireId(): Long =
@@ -201,7 +234,8 @@ class MediaAsset private constructor(
                     mimeType: String,
                     sizeBytes: Long,
                     checkSum: String,
-                    capturedAt: Instant): MediaAsset
-        = MediaAsset(eventId, uploadSessionId, prepareIdempotencyKey, objectKey, fileName, mediaType, mimeType, sizeBytes, checkSum, capturedAt)
+                    capturedAt: Instant?,
+                    uploadExpiresAt: Instant): MediaAsset
+        = MediaAsset(eventId, uploadSessionId, prepareIdempotencyKey, objectKey, fileName, mediaType, mimeType, sizeBytes, checkSum, capturedAt, uploadExpiresAt)
     }
 }
