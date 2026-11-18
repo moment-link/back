@@ -5,7 +5,7 @@ import java.time.Duration
 import java.time.Instant
 
 interface MediaObjectStorage {
-    fun presignUpload(objectKey: String, mimeType: String, checksum: String, validity: Duration): UploadTarget
+    fun presignUpload(objectKey: String, mimeType: String, sizeBytes: Long, checksum: String, validity: Duration): UploadTarget
     fun presignDownload(objectKey: String, validity: Duration): DownloadTarget
     fun head(objectKey: String): StoredObjectInfo
     fun open(objectKey: String): InputStream

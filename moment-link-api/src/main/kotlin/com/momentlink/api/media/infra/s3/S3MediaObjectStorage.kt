@@ -24,18 +24,20 @@ class S3MediaObjectStorage(
     private val properties: S3Properties,
 ) : MediaObjectStorage {
 
-    override fun presignUpload(objectKey: String, mimeType: String, checksum: String, validity: Duration): UploadTarget {
+    // 크기도 서명에 묶어 준비 때 알린 크기와 다른 파일은 S3가 받지 않게 한다.
+    override fun presignUpload(objectKey: String, mimeType: String, sizeBytes: Long, checksum: String, validity: Duration): UploadTarget {
         val put = PutObjectRequest.builder()
             .bucket(properties.bucket)
             .key(objectKey)
             .contentType(mimeType)
+            .contentLength(sizeBytes)
             .checksumSHA256(checksum)
             .build()
         val presigned = presigner.presignPutObject { it.signatureDuration(validity).putObjectRequest(put) }
 
-        // 브라우저가 그대로 보내야 하는 서명 헤더. Host는 브라우저가 붙인다.
+        // 브라우저가 그대로 보내야 하는 서명 헤더. Host·Content-Length는 브라우저가 직접 붙인다.
         val headers = presigned.signedHeaders()
-            .filterKeys { !it.equals("host", ignoreCase = true) }
+            .filterKeys { it.lowercase() !in BROWSER_MANAGED_HEADERS }
             .mapValues { (_, values) -> values.joinToString(",") }
         return UploadTarget(presigned.url().toString(), headers)
     }
@@ -89,6 +91,7 @@ class S3MediaObjectStorage(
 
     companion object {
         private const val NOT_FOUND = 404
+        private val BROWSER_MANAGED_HEADERS = setOf("host", "content-length")
         private val STREAM_TIMEOUT = Duration.ofMinutes(10)
     }
 }

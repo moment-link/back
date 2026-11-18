@@ -19,6 +19,7 @@ import com.momentlink.api.participant.port.out.ParticipantSessionRepository
 import com.momentlink.domain.media.MediaAsset
 import com.momentlink.domain.media.PublicationStatus
 import com.momentlink.domain.participant.UploadStatus
+import jakarta.persistence.EntityManager
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -40,6 +41,7 @@ class MediaUploadService(
     private val properties: MediaUploadProperties,
     private val urlIssuer: MediaUrlIssuer,
     private val transactionTemplate: TransactionTemplate,
+    private val entityManager: EntityManager,
 ) {
 
     @Transactional
@@ -104,6 +106,8 @@ class MediaUploadService(
             // HEAD 도중 취소·삭제됐으면 완료가 덮어쓰지 않도록 잠근 뒤 다시 확인한다.
             val locked = mediaAssetRepository.findOwnedForUpdate(mediaId, participant.eventId, participant.sessionId)
                 ?: throw BusinessException(ErrorCode.MEDIA_NOT_FOUND)
+            // OSIV로 요청 내내 같은 영속성 컨텍스트를 써서 HEAD 전에 읽은 상태가 남아 있다. DB 값으로 다시 읽는다.
+            entityManager.refresh(locked)
             completedResult(locked, idempotencyKey) ?: run {
                 requireCompletable(locked)
                 val now = Instant.now()
@@ -176,6 +180,7 @@ class MediaUploadService(
         storage.presignUpload(
             media.objectKey,
             media.mimeType,
+            media.sizeBytes,
             media.checkSum,
             Duration.between(now, checkNotNull(media.uploadExpiresAt)),
         )
