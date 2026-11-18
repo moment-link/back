@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Slice
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -99,4 +100,23 @@ interface MediaAssetRepository : JpaRepository<MediaAsset, Long> {
     """
     )
     fun findTransferBacklog(eventId: Long): List<MediaAsset>
+
+    // 완료 요청이 HEAD 중일 수 있어 기한 직후가 아니라 유예 시간이 지난 뒤에 만료시킨다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        SELECT m FROM MediaAsset m
+        WHERE m.uploadStatus = com.momentlink.domain.participant.UploadStatus.PENDING
+          AND (m.uploadExpiresAt IS NULL OR m.uploadExpiresAt <= :threshold)
+        ORDER BY m.id
+    """
+    )
+    fun findExpiredPending(threshold: Instant, pageable: Pageable): List<MediaAsset>
+
+    @Query("SELECT m FROM MediaAsset m WHERE m.purgedAt IS NULL AND m.deleteAfter <= :now ORDER BY m.id")
+    fun findPurgeCandidates(now: Instant, pageable: Pageable): List<MediaAsset>
+
+    @Modifying
+    @Query("UPDATE MediaAsset m SET m.purgedAt = :now WHERE m.id = :id")
+    fun markPurged(id: Long, now: Instant): Int
 }
