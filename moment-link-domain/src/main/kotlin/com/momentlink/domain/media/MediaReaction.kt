@@ -6,14 +6,14 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
-import jakarta.persistence.Index
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 
 @Entity
 @Table(
     name = "media_reaction",
-    indexes = [
-        Index(name = "idx_media_reaction_id", columnList = "media_asset_id,participant_session_id")
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_media_reaction_media_session", columnNames = ["media_asset_id", "participant_session_id"])
     ]
 )
 class MediaReaction private constructor(
@@ -26,12 +26,12 @@ class MediaReaction private constructor(
     var id: Long? = null
         protected set
 
-    @Column(name = "media_asset_id")
-    var mediaAssetId: Long? = mediaAssetId
+    @Column(name = "media_asset_id", nullable = false, updatable = false)
+    var mediaAssetId: Long = mediaAssetId
         protected set
 
     @Column(name = "participant_session_id", nullable = false, updatable = false)
-    var participantSessionId: Long? = participantSessionId
+    var participantSessionId: Long = participantSessionId
         protected set
 
     init {

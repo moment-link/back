@@ -67,4 +67,23 @@ interface MediaAssetRepository : JpaRepository<MediaAsset, Long> {
         capturedTo: Instant?,
         pageable: Pageable,
     ): Slice<MediaAsset>
+
+    @Query(
+        """
+        SELECT m FROM MediaAsset m
+        WHERE m.eventId = :eventId
+          AND m.deletedAt IS NULL
+          AND m.uploadStatus = com.momentlink.domain.participant.UploadStatus.UPLOADED
+          AND m.publicationStatus = com.momentlink.domain.media.PublicationStatus.APPROVED
+          AND (:mediaType IS NULL OR m.mediaType = :mediaType)
+          AND (:capturedFrom IS NULL OR (m.capturedAt >= :capturedFrom AND m.capturedAt < :capturedTo))
+    """
+    )
+    fun searchGallery(
+        eventId: Long,
+        mediaType: MediaType?,
+        capturedFrom: Instant?,
+        capturedTo: Instant?,
+        pageable: Pageable,
+    ): Slice<MediaAsset>
 }

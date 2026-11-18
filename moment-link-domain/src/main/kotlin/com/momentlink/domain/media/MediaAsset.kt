@@ -220,6 +220,14 @@ class MediaAsset private constructor(
         publicationStatus = status
     }
 
+    fun increaseLikeCount() {
+        likeCount += 1
+    }
+
+    fun decreaseLikeCount() {
+        likeCount = (likeCount - 1).coerceAtLeast(0)
+    }
+
     fun isPubliclyVisible(): Boolean {
         return !isDeleted() &&
                 uploadStatus == UploadStatus.UPLOADED &&
