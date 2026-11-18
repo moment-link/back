@@ -14,6 +14,7 @@ import com.momentlink.api.storage.dto.StorageStatusResDto
 import com.momentlink.api.storage.infra.google.DriveGrant
 import com.momentlink.api.storage.infra.google.GoogleDriveOAuthClient
 import com.momentlink.api.storage.port.out.StorageRepository
+import com.momentlink.api.transfer.application.TransferEnqueuer
 import com.momentlink.domain.storage.Storage
 import com.momentlink.domain.storage.StorageConnectState
 import com.momentlink.domain.storage.StorageProvider
@@ -31,6 +32,7 @@ class StorageService(
     private val stateStore: StorageConnectStateStore,
     private val driveClient: GoogleDriveOAuthClient,
     private val tokenCipher: TokenCipher,
+    private val transferEnqueuer: TransferEnqueuer,
     private val transactionTemplate: TransactionTemplate,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -85,6 +87,9 @@ class StorageService(
             ?: storageRepository.save(
                 Storage.connect(connectState.eventId, connectState.provider, grant.accountId, grant.email, encrypted)
             )
+
+        // 연결 전에 승인된 미디어를 전송 대상으로 모은다.
+        transferEnqueuer.enqueueBacklog(connectState.eventId, storage.requiredId())
         log.info("저장소 연결: eventId={}, storageId={}, provider={}", connectState.eventId, storage.requiredId(), connectState.provider)
     }
 }

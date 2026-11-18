@@ -12,6 +12,7 @@ import com.momentlink.api.media.dto.PublicationChangeReqDto
 import com.momentlink.api.media.dto.PublicationChangeResDto
 import com.momentlink.api.media.port.out.MediaAssetRepository
 import com.momentlink.api.moment.port.out.MomentRepository
+import com.momentlink.api.transfer.application.TransferEnqueuer
 import com.momentlink.domain.media.MediaType
 import com.momentlink.domain.media.PublicationStatus
 import com.momentlink.domain.participant.UploadStatus
@@ -28,6 +29,7 @@ class HostMediaService(
     private val uploaderNameReader: UploaderNameReader,
     private val urlIssuer: MediaUrlIssuer,
     private val properties: MediaUploadProperties,
+    private val transferEnqueuer: TransferEnqueuer,
 ) {
 
     @Transactional(readOnly = true)
@@ -77,6 +79,8 @@ class HostMediaService(
         if (media.uploadStatus != UploadStatus.UPLOADED) throw BusinessException(ErrorCode.INVALID_UPLOAD_STATE)
 
         media.changePublicationStatus(req.publicationStatus)
+        // 승인되면 연결된 외부 저장소로 보낼 작업을 만든다.
+        if (media.isPubliclyVisible()) transferEnqueuer.enqueue(media)
         return PublicationChangeResDto(media.requireId(), media.publicationStatus)
     }
 

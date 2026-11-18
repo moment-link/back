@@ -86,4 +86,17 @@ interface MediaAssetRepository : JpaRepository<MediaAsset, Long> {
         capturedTo: Instant?,
         pageable: Pageable,
     ): Slice<MediaAsset>
+
+    // 저장소 연결 직후, 승인됐지만 아직 전송 작업이 없는 미디어
+    @Query(
+        """
+        SELECT m FROM MediaAsset m
+        WHERE m.eventId = :eventId
+          AND m.deletedAt IS NULL
+          AND m.uploadStatus = com.momentlink.domain.participant.UploadStatus.UPLOADED
+          AND m.publicationStatus = com.momentlink.domain.media.PublicationStatus.APPROVED
+          AND NOT EXISTS (SELECT t FROM MediaTransfer t WHERE t.mediaAssetId = m.id)
+    """
+    )
+    fun findTransferBacklog(eventId: Long): List<MediaAsset>
 }

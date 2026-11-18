@@ -98,6 +98,16 @@ class MediaTransfer private constructor(
         nextRetryAt = null
     }
 
+    // 수동 재시도. 이미 대기 중이면 그대로 둔다.
+    fun requeue() {
+        if (status == TransferStatus.PENDING) return
+        check(status == TransferStatus.RETRY_WAIT || status == TransferStatus.PERMANENT_FAILED) {
+            "재시도 대기 또는 영구 실패한 전송만 다시 대기열에 넣을 수 있습니다."
+        }
+        status = TransferStatus.PENDING
+        nextRetryAt = null
+    }
+
     fun markPermanentlyFailed() {
         check(status == TransferStatus.IN_PROGRESS) { "진행 중인 전송만 영구 실패 처리할 수 있습니다." }
 
