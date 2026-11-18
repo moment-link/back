@@ -25,10 +25,11 @@ resource "aws_instance" "app" {
   user_data                   = file("${path.module}/templates/user-data.sh")
   user_data_replace_on_change = true
   credit_specification { cpu_credits = "standard" }
+  # Docker 컨테이너 안의 AWS SDK가 IMDSv2로 IAM Role 자격 증명을 받으려면 hop limit이 2여야 한다.
   metadata_options {
     http_tokens                 = "required"
     http_endpoint               = "enabled"
-    http_put_response_hop_limit = 1
+    http_put_response_hop_limit = 2
   }
   root_block_device {
     volume_type = "gp3"

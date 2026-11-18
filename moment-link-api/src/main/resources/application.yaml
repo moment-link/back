@@ -8,6 +8,21 @@ spring:
 # 프론트 기본 주소. 공유 링크는 /event/{shareKey}/join 경로로 생성한다.
 frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
+media:
+  s3:
+    bucket: ${MEDIA_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+  upload:
+    url-validity: 10m
+    view-url-validity: 15m
+    image-max-bytes: 20971520     # 20 MiB
+    video-max-bytes: 209715200    # 200 MiB
+    image-mime-types: image/jpeg,image/png,image/webp
+    # 브라우저 촬영: iOS는 mp4/quicktime, Chrome·Android MediaRecorder는 webm
+    video-mime-types: video/mp4,video/quicktime,video/webm
+    # URL 만료 전에 시작된 PUT이 끝날 시간을 두고 객체를 지운다.
+    cleanup-delay: 5m
+
 logging:
   level:
     # 허용되지 않은 Origin을 거부할 때 사유를 남긴다.

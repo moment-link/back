@@ -50,3 +50,8 @@ variable "mysql_engine_version" {
   type    = string
   default = "8.4"
 }
+variable "media_cors_origins" {
+  type        = list(string)
+  default     = ["https://localhost:5173"]
+  description = "Frontend origins allowed to PUT/GET media through presigned URLs."
+}
