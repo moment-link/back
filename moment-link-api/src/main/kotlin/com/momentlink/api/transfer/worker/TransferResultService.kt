@@ -37,10 +37,17 @@ class TransferResultService(
     @Transactional
     fun recoverStale(now: Instant) {
         transferRepository.findStaleInProgress(now.minus(properties.staleAfter)).forEach { transfer ->
+            // 전송 중 서버를 죽이는 파일이 끝없이 다시 잡히지 않게 최대 시도 횟수를 지킨다.
+            val willRetry = transfer.attemptCount < properties.maxAttempts
+            val result = if (willRetry) TransferAttemptResult.RETRYABLE_FAILED else TransferAttemptResult.PERMANENT_FAILED
             attemptRepository.findByMediaTransferIdAndAttemptNumber(transfer.requiredId(), transfer.attemptCount)
                 ?.takeIf { it.result == null }
-                ?.markFailed(TransferAttemptResult.RETRYABLE_FAILED, TransferFailureType.UNKNOWN, "작업이 중단되어 다시 시도합니다.", now)
-            transfer.scheduleRetry(now, now.plus(STALE_RETRY_DELAY))
+                ?.markFailed(result, TransferFailureType.UNKNOWN, "작업이 중단되었습니다.", now)
+            if (willRetry) {
+                transfer.scheduleRetry(now, now.plus(STALE_RETRY_DELAY))
+            } else {
+                transfer.markPermanentlyFailed()
+            }
         }
     }
 

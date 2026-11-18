@@ -22,7 +22,10 @@ class TransferWorker(
     @Scheduled(fixedDelayString = "\${transfer.worker.poll-interval-ms}")
     fun run() {
         resultService.recoverStale(Instant.now())
-        claimService.claim(Instant.now(), properties.batchSize).forEach(::process)
+        repeat(properties.batchSize) {
+            val claimed = claimService.claimNext(Instant.now()) ?: return
+            process(claimed)
+        }
     }
 
     // 한 작업의 실패가 다음 작업이나 스케줄러를 멈추지 않게 한다.

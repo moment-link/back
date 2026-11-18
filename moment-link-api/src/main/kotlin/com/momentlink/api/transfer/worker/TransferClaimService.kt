@@ -21,17 +21,18 @@ sealed interface TransferOutcome {
     data class Failed(val failureType: TransferFailureType, val retryable: Boolean, val message: String?) : TransferOutcome
 }
 
-// 짧은 트랜잭션으로 작업을 IN_PROGRESS로 점유하고 시도 이력을 남긴다. 실제 전송은 트랜잭션 밖에서 한다.
+// 짧은 트랜잭션으로 작업 하나를 IN_PROGRESS로 점유하고 시도 이력을 남긴다. 실제 전송은 트랜잭션 밖에서 한다.
+// 점유 쿼리가 공개 상태·삭제 여부·연결 상태를 확인하므로, 전송 직전에 한 건씩 잡는다.
 @Service
 class TransferClaimService(
     private val transferRepository: MediaTransferRepository,
     private val attemptRepository: MediaTransferAttemptRepository,
 ) {
     @Transactional
-    fun claim(now: Instant, batchSize: Int): List<ClaimedTransfer> =
-        transferRepository.findClaimable(now, PageRequest.of(0, batchSize)).map { transfer ->
-            val attemptNumber = transfer.beginAttempt()
-            val attempt = attemptRepository.save(MediaTransferAttempt.start(transfer.requiredId(), attemptNumber, now))
-            ClaimedTransfer(transfer.requiredId(), attempt.requiredId(), transfer.mediaAssetId, transfer.storageId)
-        }
+    fun claimNext(now: Instant): ClaimedTransfer? {
+        val transfer = transferRepository.findClaimable(now, PageRequest.of(0, 1)).firstOrNull() ?: return null
+        val attemptNumber = transfer.beginAttempt()
+        val attempt = attemptRepository.save(MediaTransferAttempt.start(transfer.requiredId(), attemptNumber, now))
+        return ClaimedTransfer(transfer.requiredId(), attempt.requiredId(), transfer.mediaAssetId, transfer.storageId)
+    }
 }

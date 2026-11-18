@@ -51,6 +51,7 @@ transfer:
   worker:
     enabled: ${TRANSFER_WORKER_ENABLED:true}
     poll-interval-ms: 30000
+    # 한 번 돌 때 최대 전송 수. 전송 직전에 한 건씩 점유한다.
     batch-size: 5
     max-attempts: 5
     # 이 시간 넘게 IN_PROGRESS면 서버가 전송 중 재시작된 것으로 보고 재시도한다.

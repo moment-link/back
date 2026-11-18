@@ -52,6 +52,10 @@ class StorageCallbackController(
         } catch (ex: BusinessException) {
             log.warn("[{}] 저장소 콜백 실패: eventId={} - {}", ex.errorCode.code, connectState.eventId, ex.reason ?: ex.errorCode.message)
             ex.errorCode
+        } catch (ex: RuntimeException) {
+            // state는 이미 소비됐으므로 JSON 500 대신 프론트 실패 화면으로 보낸다.
+            log.error("[{}] 저장소 콜백 처리 중 예상하지 못한 오류: eventId={}", ErrorCode.STORAGE_CONNECT_FAILED.code, connectState.eventId, ex)
+            ErrorCode.STORAGE_CONNECT_FAILED
         }
         return ResponseEntity.status(HttpStatus.FOUND)
             .location(redirectUri(connectState.eventId, failure))
