@@ -138,12 +138,13 @@ class MediaAsset private constructor(
         require(checkSum.isNotBlank())
     }
 
-    fun delete(now: Instant) {
+    fun delete(now: Instant, purgeAt: Instant) {
         if (deletedAt != null) return
         if (uploadStatus == UploadStatus.PENDING) {
             uploadStatus = UploadStatus.CANCELED
         }
         deletedAt = now
+        deleteAfter = purgeAt
     }
 
     fun isDeleted(): Boolean = deletedAt != null
@@ -199,13 +200,14 @@ class MediaAsset private constructor(
         this.deleteAfter = deleteAfter
     }
 
-    fun cancelUpload(now: Instant) {
+    // 취소는 삭제가 아니므로 내 업로드 목록의 CANCELED 필터에 남는다.
+    fun cancelUpload(purgeAt: Instant) {
         if(uploadStatus == UploadStatus.CANCELED) return
         check(uploadStatus == UploadStatus.PENDING) {
             "대기 중인 업로드만 취소할 수 있습니다."
         }
         uploadStatus = UploadStatus.CANCELED
-        deletedAt = now
+        deleteAfter = purgeAt
     }
 
     fun changePublicationStatus(status: PublicationStatus) {

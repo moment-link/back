@@ -54,3 +54,38 @@ data class CompleteUploadResDto(
             CompleteUploadResDto(media.requireId(), media.uploadStatus, media.publicationStatus, media.uploadedAt)
     }
 }
+
+data class CancelUploadResDto(
+    val mediaId: Long,
+    val uploadStatus: UploadStatus,
+)
+
+data class MediaDeleteResDto(
+    val mediaId: Long,
+    val deleted: Boolean,
+)
+
+data class MyMediaItemResDto(
+    val mediaId: Long,
+    val fileName: String,
+    val mediaType: MediaType,
+    val uploadStatus: UploadStatus,
+    val publicationStatus: PublicationStatus,
+    val thumbnailUrl: String?,
+    val capturedAt: Instant?,
+    val uploadedAt: Instant?,
+) {
+    companion object {
+        fun from(media: MediaAsset, thumbnailUrl: String?): MyMediaItemResDto =
+            MyMediaItemResDto(
+                mediaId = media.requireId(),
+                fileName = media.fileName,
+                mediaType = media.mediaType,
+                uploadStatus = media.uploadStatus,
+                publicationStatus = media.publicationStatus,
+                thumbnailUrl = thumbnailUrl,
+                capturedAt = media.capturedAt,
+                uploadedAt = media.uploadedAt,
+            )
+    }
+}

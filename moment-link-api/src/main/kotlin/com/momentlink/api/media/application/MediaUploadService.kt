@@ -1,9 +1,14 @@
 package com.momentlink.api.media.application
 
 import com.momentlink.api.auth.common.BusinessException
+import com.momentlink.api.common.Validator
 import com.momentlink.api.common.web.ErrorCode
+import com.momentlink.api.common.web.SliceResDto
 import com.momentlink.api.event.port.out.EventRepository
+import com.momentlink.api.media.dto.CancelUploadResDto
 import com.momentlink.api.media.dto.CompleteUploadResDto
+import com.momentlink.api.media.dto.MediaDeleteResDto
+import com.momentlink.api.media.dto.MyMediaItemResDto
 import com.momentlink.api.media.dto.PrepareUploadReqDto
 import com.momentlink.api.media.dto.PrepareUploadResDto
 import com.momentlink.api.media.port.out.MediaAssetRepository
@@ -12,7 +17,9 @@ import com.momentlink.api.media.port.out.UploadTarget
 import com.momentlink.api.participant.common.ParticipantSessionProvider
 import com.momentlink.api.participant.port.out.ParticipantSessionRepository
 import com.momentlink.domain.media.MediaAsset
+import com.momentlink.domain.media.PublicationStatus
 import com.momentlink.domain.participant.UploadStatus
+import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +38,7 @@ class MediaUploadService(
     private val policy: MediaUploadPolicy,
     private val storage: MediaObjectStorage,
     private val properties: MediaUploadProperties,
+    private val urlIssuer: MediaUrlIssuer,
     private val transactionTemplate: TransactionTemplate,
 ) {
 
@@ -104,6 +112,48 @@ class MediaUploadService(
                 CompleteUploadResDto.from(locked)
             }
         })
+    }
+
+    @Transactional
+    fun cancel(mediaId: Long): CancelUploadResDto {
+        val media = getOwnedForUpdate(mediaId)
+        when (media.uploadStatus) {
+            UploadStatus.CANCELED -> Unit
+            UploadStatus.PENDING -> media.cancelUpload(properties.purgeAt(media.uploadExpiresAt, Instant.now()))
+            else -> throw BusinessException(ErrorCode.INVALID_UPLOAD_STATE)
+        }
+        return CancelUploadResDto(media.requireId(), media.uploadStatus)
+    }
+
+    // 반복 삭제도 성공한다. S3 객체는 정리 Job이 나중에 지운다.
+    @Transactional
+    fun deleteMine(mediaId: Long): MediaDeleteResDto {
+        val media = getOwnedForUpdate(mediaId)
+        val now = Instant.now()
+        media.delete(now, properties.purgeAt(media.uploadExpiresAt, now))
+        return MediaDeleteResDto(media.requireId(), deleted = true)
+    }
+
+    @Transactional(readOnly = true)
+    fun getMine(
+        uploadStatus: UploadStatus?,
+        publicationStatus: PublicationStatus?,
+        page: Int,
+        limit: Int,
+        sort: MediaSort,
+    ): SliceResDto<MyMediaItemResDto> {
+        Validator.pagination(page, limit)
+        val participant = sessionProvider.get()
+        val slice = mediaAssetRepository.searchMine(
+            participant.sessionId, uploadStatus, publicationStatus, PageRequest.of(page, limit, sort.toSort()),
+        )
+        return SliceResDto.from(slice) { MyMediaItemResDto.from(it, urlIssuer.thumbnailUrl(it)) }
+    }
+
+    private fun getOwnedForUpdate(mediaId: Long): MediaAsset {
+        val participant = sessionProvider.get()
+        return mediaAssetRepository.findOwnedForUpdate(mediaId, participant.eventId, participant.sessionId)
+            ?: throw BusinessException(ErrorCode.MEDIA_NOT_FOUND)
     }
 
     private fun replayPrepare(media: MediaAsset, req: PrepareUploadReqDto, now: Instant): PrepareUploadResDto {
