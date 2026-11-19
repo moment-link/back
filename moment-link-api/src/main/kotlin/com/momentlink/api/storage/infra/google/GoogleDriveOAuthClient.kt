@@ -98,6 +98,20 @@ class GoogleDriveOAuthClient(
             throw DriveTransferException(TransferFailureType.NETWORK, retryable = true, "저장소 토큰 갱신 통신 실패")
         }
 
+    // 토큰이 이미 무효(400 invalid_token)면 폐기된 것으로 본다.
+    fun revoke(refreshToken: String) {
+        try {
+            restClient.post()
+                .uri(drive.revokeUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(LinkedMultiValueMap<String, String>().apply { add("token", refreshToken) })
+                .retrieve()
+                .toBodilessEntity()
+        } catch (ex: RestClientResponseException) {
+            if (ex.statusCode.value() != BAD_REQUEST) throw ex
+        }
+    }
+
     // 재인증이 필요한 건 invalid_grant(권한 회수·토큰 만료)뿐이다. 일시 오류로 저장소를 재인증 상태로 바꾸지 않는다.
     private fun classifyRefreshFailure(ex: RestClientResponseException): DriveTransferException {
         val status = ex.statusCode.value()

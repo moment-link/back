@@ -52,7 +52,7 @@ class StorageController(
 
     @Operation(
         summary = "저장소 연결 해제",
-        description = "연결을 해제합니다. 연결이 없거나 이미 해제돼도 성공하며, 외부 저장소에 보낸 파일은 지우지 않습니다.",
+        description = "연결을 해제하고 Google 토큰을 폐기합니다. 같은 Google 계정을 다른 행사에서도 쓰고 있으면 토큰은 폐기하지 않고 이 행사 연결만 끊습니다. 연결이 없거나 이미 해제돼도 성공하며, 외부 저장소에 보낸 파일은 지우지 않습니다.",
     )
     @DeleteMapping
     fun disconnect(@PathVariable eventId: Long): CommonResponse<StorageDisconnectResDto>

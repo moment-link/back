@@ -69,11 +69,36 @@ class StorageService(
     }
 
     // 연결이 없거나 이미 해제돼도 성공. 외부 저장소에 보낸 파일은 지우지 않는다.
-    @Transactional
+    // Google 폐기는 네트워크 호출이라 해제를 커밋한 뒤에 한다.
     fun disconnect(eventId: Long): StorageDisconnectResDto {
         hostEventReader.getOwned(eventId)
-        storageRepository.findByEventIdForUpdate(eventId)?.disconnect()
+        transactionTemplate.execute { disconnectAndTakeToken(eventId) }
+            ?.let { revokeQuietly(eventId, it) }
         return StorageDisconnectResDto(StorageStatus.DISCONNECTED)
+    }
+
+    // Google 토큰 폐기는 계정 단위 권한 전체를 회수한다.
+    // 같은 계정을 연결한 다른 행사 저장소가 있으면 그쪽 전송까지 끊기므로, 이때는 우리 쪽 토큰만 지운다.
+    private fun disconnectAndTakeToken(eventId: Long): String? {
+        val storage = storageRepository.findByEventIdForUpdate(eventId) ?: return null
+        if (storage.status == StorageStatus.DISCONNECTED) return null
+
+        val encrypted = storage.encryptedRefreshToken
+        val isSharedAccount = storageRepository.existsByExternalAccountIdAndStatusNotAndIdNot(
+            storage.externalAccountId, StorageStatus.DISCONNECTED, storage.requiredId(),
+        )
+        storage.disconnect()
+        return if (isSharedAccount) null else encrypted
+    }
+
+    // 폐기에 실패해도 우리 쪽 연결과 토큰은 이미 지웠으므로 해제는 성공으로 둔다.
+    private fun revokeQuietly(eventId: Long, encryptedRefreshToken: String) {
+        try {
+            driveClient.revoke(tokenCipher.decrypt(encryptedRefreshToken))
+            log.info("저장소 토큰 폐기: eventId={}", eventId)
+        } catch (ex: Exception) {
+            log.warn("저장소 토큰 폐기 실패: eventId={} - {}: {}", eventId, ex.javaClass.simpleName, LogSanitizer.sanitize(ex.message))
+        }
     }
 
     private fun saveConnection(connectState: StorageConnectState, grant: DriveGrant) {

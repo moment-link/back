@@ -72,8 +72,10 @@ class Storage private constructor(
         status = StorageStatus.REAUTH_REQUIRED;
     }
 
+    // 해제하면 저장된 토큰도 지운다. 다시 쓰려면 OAuth로 재연결해야 한다.
     fun disconnect() {
         status = StorageStatus.DISCONNECTED
+        encryptedRefreshToken = ""
     }
 
     fun requiredId(): Long

@@ -1,6 +1,7 @@
 package com.momentlink.api.storage.port.out
 
 import com.momentlink.domain.storage.Storage
+import com.momentlink.domain.storage.StorageStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Repository
 interface StorageRepository : JpaRepository<Storage, Long> {
 
     fun findByEventId(eventId: Long): Storage?
+
+    fun existsByExternalAccountIdAndStatusNotAndIdNot(externalAccountId: String, status: StorageStatus, id: Long): Boolean
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Storage s WHERE s.eventId = :eventId")

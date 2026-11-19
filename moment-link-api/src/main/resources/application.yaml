@@ -43,6 +43,7 @@ storage:
     client-secret: ${GOOGLE_CLIENT_SECRET}
     authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
     token-uri: https://oauth2.googleapis.com/token
+    revoke-uri: https://oauth2.googleapis.com/revoke
     user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
     redirect-uri: ${GOOGLE_DRIVE_REDIRECT_URI}
     folder-prefix: Moment Link

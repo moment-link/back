@@ -13,6 +13,7 @@ data class StorageProperties(
         val clientSecret: String,
         val authorizationUri: String,
         val tokenUri: String,
+        val revokeUri: String,
         val userInfoUri: String,
         val redirectUri: String,
         val folderPrefix: String,
